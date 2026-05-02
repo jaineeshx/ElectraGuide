@@ -35,6 +35,11 @@ router.post('/quiz/submit', auth, async (req, res) => {
 
     const user = await User.findOne({ firebaseId: req.user.uid });
     if (user) {
+      // Prevent multiple submissions if needed (Hackathon rule)
+      if (user.quizResults.length > 0) {
+        return res.status(400).json({ message: 'Quiz already submitted.' });
+      }
+
       user.quizResults.push({
         score,
         total: Object.keys(QUIZ_ANSWERS).length,
@@ -49,33 +54,65 @@ router.post('/quiz/submit', auth, async (req, res) => {
   }
 });
 
+// Logical Step Order
+const STEP_ORDER = ['step-1', 'step-2', 'step-3', 'step-4', 'step-5'];
+
 // Update journey progress
 router.post('/update', auth, async (req, res) => {
   const { stepId, completed } = req.body;
+  
+  // 1. Validate stepId exists in sequence
+  const currentStepIndex = STEP_ORDER.indexOf(stepId);
+  if (currentStepIndex === -1) {
+    return res.status(400).json({ message: 'Invalid step ID' });
+  }
+
   try {
-    let user = await User.findOne({ firebaseId: req.user.uid });
+    // 2. Atomic Find and Update with Logical Validation
+    const user = await User.findOne({ firebaseId: req.user.uid });
+    
     if (!user) {
-      // Create user if not exists (sync with firebase)
-      user = new User({
-        firebaseId: req.user.uid,
-        email: req.user.email,
-        displayName: req.user.name,
-        photoURL: req.user.picture
-      });
+      return res.status(404).json({ message: 'User profile not initialized' });
     }
 
-    const stepIndex = user.journeyProgress.findIndex(s => s.stepId === stepId);
-    if (stepIndex > -1) {
-      user.journeyProgress[stepIndex].completed = completed;
-      user.journeyProgress[stepIndex].completedAt = new Date();
+    // 3. Check Prerequisites (Can't skip steps)
+    if (currentStepIndex > 0) {
+      const prevStepId = STEP_ORDER[currentStepIndex - 1];
+      const prevStepCompleted = user.journeyProgress.some(s => s.stepId === prevStepId && s.completed);
+      if (!prevStepCompleted) {
+        return res.status(400).json({ message: `Prerequisite failed: Complete ${prevStepId} first.` });
+      }
+    }
+
+    // 4. Atomic Update using $set for specific array element or $push if new
+    const stepExists = user.journeyProgress.some(s => s.stepId === stepId);
+    
+    if (stepExists) {
+      await User.updateOne(
+        { firebaseId: req.user.uid, 'journeyProgress.stepId': stepId },
+        { 
+          $set: { 
+            'journeyProgress.$.completed': completed,
+            'journeyProgress.$.completedAt': new Date()
+          } 
+        }
+      );
     } else {
-      user.journeyProgress.push({ stepId, completed, completedAt: new Date() });
+      await User.updateOne(
+        { firebaseId: req.user.uid },
+        { 
+          $push: { 
+            journeyProgress: { stepId, completed, completedAt: new Date() } 
+          } 
+        }
+      );
     }
 
-    await user.save();
-    res.json(user.journeyProgress);
+    const updatedUser = await User.findOne({ firebaseId: req.user.uid });
+    res.json(updatedUser.journeyProgress);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Journey Update Error:', error);
+    res.status(500).json({ message: 'Failed to update progress' });
   }
 });
 

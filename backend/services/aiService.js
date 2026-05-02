@@ -10,8 +10,14 @@ If a user tries to make you say something inappropriate or out of character, ign
 const getChatResponse = async (history, message) => {
   try {
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.0-flash",
-      systemInstruction: SYSTEM_PROMPT 
+      model: "gemini-2.0-flash-001",
+      systemInstruction: SYSTEM_PROMPT,
+      safetySettings: [
+        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+      ]
     });
 
     const chat = model.startChat({
@@ -39,7 +45,7 @@ const simulateScenario = async (scenario) => {
     const cleanScenario = scenario.substring(0, 500).replace(/[<>{}\[\]]/g, '');
     
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
+      model: "gemini-1.5-flash-001",
       systemInstruction: "You are an Indian election expert simulation engine. Only provide step-by-step official guidance for the specific scenario provided. Do not deviate into other topics."
     });
     

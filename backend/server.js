@@ -40,7 +40,7 @@ app.use(cors({
   },
   credentials: true
 }));
-app.use(express.json({ limit: '10kb' }));
+app.use(express.json({ limit: '10kb', strict: true, type: 'application/json' }));
 app.use(mongoSanitize());
 
 // CSRF Protection Middleware for state-changing requests
@@ -91,8 +91,13 @@ app.use('/api/calendar', require('./routes/calendar'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
+  const isProduction = process.env.ENVIRONMENT === 'production';
   console.error(err.stack);
-  res.status(500).json({ message: 'Internal Server Error', error: err.message });
+  
+  res.status(err.status || 500).json({ 
+    message: isProduction ? 'Internal Server Error' : err.message,
+    error: isProduction ? {} : err.stack 
+  });
 });
 
 if (process.env.NODE_ENV !== 'test') {

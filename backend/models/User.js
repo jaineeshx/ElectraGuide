@@ -3,47 +3,47 @@ const mongoose = require('mongoose');
 const userSchema = new mongoose.Schema({
   firebaseId: {
     type: String,
-    required: true,
     unique: true,
+    trim: true,
+    immutable: true, // Prevent ID from being changed after creation
+    match: [/^[a-zA-Z0-9]{20,50}$/, 'Invalid Firebase ID format'], // Strict ID validation
   },
   email: {
     type: String,
     required: true,
     unique: true,
+    lowercase: true,
+    immutable: true, // Prevent email from being changed after creation
+    match: [/^\S+@\S+\.\S+$/, 'Invalid email format'],
   },
-  displayName: String,
+  displayName: { type: String, trim: true },
   photoURL: String,
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user',
+  },
   profile: {
-    age: Number,
+    age: { type: Number, min: 18, max: 120 },
     location: {
       state: String,
       district: String,
       constituency: String,
     },
-    isFirstTimeVoter: {
-      type: Boolean,
-      default: false,
-    },
-    language: {
-      type: String,
-      default: 'en',
-    }
+    isFirstTimeVoter: { type: Boolean, default: false },
+    language: { type: String, default: 'en' }
   },
   journeyProgress: [{
-    stepId: String,
-    completed: Boolean,
-    completedAt: Date,
+    stepId: { type: String, required: true },
+    completed: { type: Boolean, default: false },
+    completedAt: { type: Date, default: Date.now },
   }],
-  quizScores: [{
-    quizId: String,
+  quizResults: [{
     score: Number,
-    totalQuestions: Number,
-    date: { type: Date, default: Date.now }
+    total: Number,
+    completedAt: { type: Date, default: Date.now }
   }],
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  }
+  createdAt: { type: Date, default: Date.now }
 });
 
 module.exports = mongoose.model('User', userSchema);
