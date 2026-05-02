@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@theme {
+  --color-saffron: #FF9933;
+  --color-saffron-dark: #E68A00;
+  --color-green-election: #128807;
+  --color-navy-chakra: #000080;
+  --color-background-light: #F8FAFC;
+  --color-background-dark: #0F172A;
+  
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-inter: "Inter", system-ui, sans-serif;
+}
+
+@layer base {
+  :root {
+    --background: #F8FAFC;
+    --foreground: #1E293B;
+  }
+
+  .dark {
+    --background: #0F172A;
+    --foreground: #F8FAFC;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    @apply font-inter antialiased transition-colors duration-300;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-6 py-3 bg-saffron text-white rounded-xl font-semibold shadow-lg hover:bg-saffron-dark transition-all transform hover:-translate-y-1 active:scale-95;
+  }
+  
+  .glass {
+    @apply backdrop-blur-md bg-white/70 dark:bg-slate-900/70 border border-white/20 dark:border-slate-700/30;
+  }
+}
+
+/* Accessibility: High Contrast Mode */
+.high-contrast {
+  --background: #000000;
+  --foreground: #FFFFFF;
+  --color-saffron: #FFFF00; /* Yellow for high contrast */
+  --color-green-election: #00FF00;
+}
+
+/* Skip link accessibility */
+.skip-link {
+  @apply absolute -top-16 left-0 bg-saffron text-white px-4 py-2 transition-all focus:top-0 z-50;
+}
