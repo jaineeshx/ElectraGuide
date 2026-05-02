@@ -6,8 +6,12 @@ const { getChatResponse, simulateScenario } = require('../services/aiService');
 // AI Chat endpoint
 router.post('/chat', auth, async (req, res) => {
   const { message, history } = req.body;
+  
+  // Validate and sanitize history: Only allow 'user' messages from client
+  const validatedHistory = (history || []).filter(h => h.role === 'user').slice(-10); // Limit context to last 10 messages
+
   try {
-    const aiResponse = await getChatResponse(history, message);
+    const aiResponse = await getChatResponse(validatedHistory, message);
     res.json({ response: aiResponse });
   } catch (error) {
     console.error('AI Error:', error);

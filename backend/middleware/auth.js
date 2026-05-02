@@ -15,10 +15,10 @@ if (!admin.apps.length) {
       admin.initializeApp({ credential });
       console.log("Firebase Admin initialized successfully.");
     } else {
-      console.warn("Firebase Admin credentials not found. Auth middleware will fail.");
+      console.warn("Firebase Admin credentials not found.");
     }
   } catch (error) {
-    console.error("Firebase Admin Init Error:", error);
+    console.error("Firebase Admin Init Failed. Check credentials format.");
   }
 }
 
