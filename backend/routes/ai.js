@@ -7,8 +7,13 @@ const { getChatResponse, simulateScenario } = require('../services/aiService');
 router.post('/chat', auth, async (req, res) => {
   const { message, history } = req.body;
   
-  // Validate and sanitize history: Only allow 'user' messages from client
-  const validatedHistory = (history || []).filter(h => h.role === 'user').slice(-10); // Limit context to last 10 messages
+  // 1. Validate message length
+  if (!message || message.length > 1000) {
+    return res.status(400).json({ message: 'Message too long. Maximum 1000 characters allowed.' });
+  }
+
+  // 2. Validate and sanitize history: Only allow 'user' messages from client
+  const validatedHistory = (history || []).filter(h => h.role === 'user').slice(-10); 
 
   try {
     const aiResponse = await getChatResponse(validatedHistory, message);

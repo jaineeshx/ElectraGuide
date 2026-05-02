@@ -7,24 +7,26 @@ const questions = [
     id: 1,
     question: "What is the minimum age to vote in Indian General Elections?",
     options: ["18 years", "21 years", "25 years", "16 years"],
-    correct: 0,
+    ref: "MA==", // Base64 for '0'
     explanation: "The voting age was lowered from 21 to 18 years by the 61st Amendment Act, 1988."
   },
   {
     id: 2,
     question: "Which of the following is NOT a valid ID for voting?",
     options: ["Aadhaar Card", "PAN Card", "Ration Card (without photo)", "Passport"],
-    correct: 2,
+    ref: "Mg==", // Base64 for '2'
     explanation: "Ration cards without photographs are not accepted as valid identity proof for voting."
   },
   {
     id: 3,
     question: "How many Lok Sabha constituencies are there in India?",
     options: ["543", "545", "550", "530"],
-    correct: 0,
+    ref: "MA==", // Base64 for '0'
     explanation: "There are 543 elected constituencies in the Lok Sabha."
   }
 ];
+
+const checkAnswer = (index, ref) => index.toString() === atob(ref);
 
 export default function QuizPage() {
   const [currentStep, setCurrentStep] = useState('start'); // start, quiz, result
@@ -45,7 +47,7 @@ export default function QuizPage() {
     if (selectedOption !== null) return;
     setSelectedOption(index);
     setShowExplanation(true);
-    if (index === questions[currentQuestion].correct) {
+    if (checkAnswer(index, questions[currentQuestion].ref)) {
       setScore(s => s + 1);
     }
   };
@@ -105,7 +107,7 @@ export default function QuizPage() {
             <div className="space-y-4 mb-8">
               {questions[currentQuestion].options.map((option, index) => {
                 const isSelected = selectedOption === index;
-                const isCorrect = index === questions[currentQuestion].correct;
+                const isCorrect = checkAnswer(index, questions[currentQuestion].ref);
                 const showResult = selectedOption !== null;
 
                 let stateClasses = "border-slate-100 hover:border-saffron bg-white dark:bg-slate-800";

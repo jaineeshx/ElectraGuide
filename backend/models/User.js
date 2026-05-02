@@ -6,7 +6,7 @@ const userSchema = new mongoose.Schema({
     unique: true,
     trim: true,
     immutable: true, // Prevent ID from being changed after creation
-    match: [/^[a-zA-Z0-9]{20,50}$/, 'Invalid Firebase ID format'], // Strict ID validation
+    match: [/^[a-zA-Z0-9]{28}$/, 'Invalid Firebase ID format'], // Exact 28-char UID validation
   },
   email: {
     type: String,
@@ -43,6 +43,7 @@ const userSchema = new mongoose.Schema({
     total: Number,
     completedAt: { type: Date, default: Date.now }
   }],
+  isSyncingCalendar: { type: Boolean, default: false }, // For distributed lock
   createdAt: { type: Date, default: Date.now }
 });
 

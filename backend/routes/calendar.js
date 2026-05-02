@@ -1,24 +1,30 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-
-// Simple in-memory lock for idempotency
-const activeSyncs = new Set();
+const User = require('../models/User');
 
 // Mock Calendar Sync endpoint
 router.post('/sync', auth, async (req, res) => {
   const { eventTitle, eventDate } = req.body;
   const userId = req.user.uid;
 
-  if (activeSyncs.has(userId)) {
-    return res.status(409).json({ message: 'Sync already in progress' });
-  }
-
-  activeSyncs.add(userId);
-  
   try {
-    console.log(`Faking Calendar Sync for user ${userId}: ${eventTitle} on ${eventDate}`);
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Sanitize log input
+    const cleanTitle = eventTitle ? eventTitle.substring(0, 100).replace(/[^a-zA-Z0-9\s]/g, '') : 'Election Event';
+
+    // 1. Attempt to acquire distributed lock in DB
+    const user = await User.findOneAndUpdate(
+      { firebaseId: userId, isSyncingCalendar: false },
+      { isSyncingCalendar: true },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(409).json({ message: 'Sync already in progress or user not found' });
+    }
+
+    console.log(`Calendar Sync: ${cleanTitle} for ${userId}`);
+    await new Promise(resolve => setTimeout(resolve, 2000)); // Simulating work
     
     res.json({ 
       success: true, 
@@ -29,7 +35,8 @@ router.post('/sync', auth, async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: 'Calendar sync failed' });
   } finally {
-    activeSyncs.delete(userId);
+    // 2. Release lock
+    await User.updateOne({ firebaseId: userId }, { isSyncingCalendar: false });
   }
 });
 

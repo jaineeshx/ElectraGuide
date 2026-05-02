@@ -68,21 +68,21 @@ app.use((req, res, next) => {
   next();
 });
 
-// Specialized Translation Rate Limiter (Stricter)
+// Specialized Translation Rate Limiter (Stricter - Authenticated Only)
 const translateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 10, // 10 requests per hour per user
-  keyGenerator: (req) => req.user?.uid || req.ip,
-  message: 'Translation quota exceeded. Please try again in an hour.'
+  keyGenerator: (req) => req.user?.uid || 'anonymous', 
+  message: 'Translation quota exceeded. Please sign in.'
 });
 app.use('/api/translate', translateLimiter);
 
-// Per-User AI Rate Limiting (Authenticated users)
+// Per-User AI Rate Limiting (Authenticated Only)
 const aiLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
   max: 10, // 10 AI requests per minute per user
-  keyGenerator: (req) => req.user?.uid || req.ip,
-  message: 'AI quota exceeded.'
+  keyGenerator: (req) => req.user?.uid || 'anonymous',
+  message: 'AI quota exceeded. Please sign in.'
 });
 app.use('/api/ai', aiLimiter);
 
@@ -94,9 +94,9 @@ const generalLimiter = rateLimit({
 });
 app.use('/api', generalLimiter);
 
-// Health Check
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'OK', timestamp: new Date() });
+// Health Check (Minimal data for reconnaissance protection)
+app.get('/health', generalLimiter, (req, res) => {
+  res.status(200).json({ status: 'OK' });
 });
 
 // Database Connection

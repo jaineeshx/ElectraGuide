@@ -21,7 +21,7 @@ const translateText = async (text, targetLanguage) => {
       parent: `projects/${projectId}/locations/${location}`,
       contents: [text],
       mimeType: 'text/plain',
-      targetLanguageCode: targetLanguage,
+      targetLanguageCode: cleanLang, // Use sanitized version
     };
 
     const [response] = await translationClient.translateText(request);

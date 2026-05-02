@@ -98,6 +98,7 @@ export default function ChatPage() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask about registration, polling dates, or voter ID..."
+          maxLength={1000}
           className="w-full glass p-5 pr-16 rounded-2xl focus:outline-none focus:ring-2 focus:ring-saffron/50 transition-all shadow-lg"
           aria-label="Ask a question"
         />

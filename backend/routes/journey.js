@@ -63,8 +63,8 @@ router.post('/quiz/submit', auth, async (req, res) => {
   }
 });
 
-// Logical Step Order
-const STEP_ORDER = ['step-1', 'step-2', 'step-3', 'step-4', 'step-5'];
+// Logical Step Order (Frozen to prevent mutation)
+const STEP_ORDER = Object.freeze(['step-1', 'step-2', 'step-3', 'step-4', 'step-5']);
 
 // Update journey progress
 router.post('/update', auth, async (req, res) => {
