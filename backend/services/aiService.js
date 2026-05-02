@@ -4,25 +4,20 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 
 const getChatResponse = async (history, message) => {
   try {
-    console.log("Starting AI Chat Response...");
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-    console.log("Model initialized.");
     const chat = model.startChat({
       history: history || [],
       generationConfig: {
         maxOutputTokens: 500,
       },
     });
-    console.log("Chat started.");
 
     const result = await chat.sendMessage(message);
-    console.log("Message sent to Gemini.");
     const response = await result.response;
-    console.log("Response received from Gemini.");
     return response.text();
   } catch (error) {
-    console.error("Gemini AI Error Stack:", error.stack);
-    throw new Error("Failed to get AI response: " + error.message);
+    console.error("Gemini AI Error:", error);
+    throw new Error("Failed to get AI response");
   }
 };
 

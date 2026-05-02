@@ -3,8 +3,8 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const { getChatResponse, simulateScenario } = require('../services/aiService');
 
-// AI Chat endpoint (Public for Guest Mode)
-router.post('/chat', async (req, res) => {
+// AI Chat endpoint
+router.post('/chat', auth, async (req, res) => {
   const { message, history } = req.body;
   try {
     const aiResponse = await getChatResponse(history, message);

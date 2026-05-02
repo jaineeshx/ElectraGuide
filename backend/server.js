@@ -31,17 +31,15 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json({ limit: '10kb' }));
-// app.use(mongoSanitize());
+app.use(mongoSanitize());
 
 // Rate Limiting
-/*
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
   message: 'Too many requests from this IP, please try again after 15 minutes'
 });
 app.use('/api', limiter);
-*/
 
 // Health Check
 app.get('/health', (req, res) => {
@@ -70,7 +68,6 @@ app.use((err, req, res, next) => {
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
-    console.log(`Allowed Origins: ${allowedOrigins.join(', ')}`);
   });
 }
 
