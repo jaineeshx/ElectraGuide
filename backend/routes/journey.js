@@ -14,6 +14,41 @@ router.get('/progress', auth, async (req, res) => {
   }
 });
 
+// Master Answer Key (Server-Side Only)
+const QUIZ_ANSWERS = {
+  1: 'B', // Minimum age to vote: 18
+  2: 'A', // Frequency of general elections: 5 years
+  3: 'C', // Constitutional body: Election Commission of India
+  4: 'D', // Identity proof: EPIC Card
+};
+
+// Submit Quiz (Server-Side Verification)
+router.post('/quiz/submit', auth, async (req, res) => {
+  const { answers } = req.body; // Array of { qId, answer }
+  try {
+    let score = 0;
+    answers.forEach(item => {
+      if (QUIZ_ANSWERS[item.qId] === item.answer) {
+        score += 1;
+      }
+    });
+
+    const user = await User.findOne({ firebaseId: req.user.uid });
+    if (user) {
+      user.quizResults.push({
+        score,
+        total: Object.keys(QUIZ_ANSWERS).length,
+        completedAt: new Date()
+      });
+      await user.save();
+    }
+
+    res.json({ score, total: Object.keys(QUIZ_ANSWERS).length });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Update journey progress
 router.post('/update', auth, async (req, res) => {
   const { stepId, completed } = req.body;

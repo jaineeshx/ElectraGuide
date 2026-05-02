@@ -9,6 +9,8 @@ const mongoSanitize = require('express-mongo-sanitize');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+app.set('trust proxy', 1);
+
 // Security Middleware
 app.use(helmet());
 const allowedOrigins = [
@@ -22,9 +24,17 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Standardize origins to prevent mismatch
+    const currentOrigin = origin ? origin.trim() : '';
+    const cleanAllowed = allowedOrigins.map(o => o ? o.trim() : '').filter(o => o !== '');
+
+    console.log('Incoming Origin:', `[${currentOrigin}]`);
+    console.log('Clean Allowed Origins:', cleanAllowed);
+
+    if (!origin || cleanAllowed.includes(currentOrigin)) {
       callback(null, true);
     } else {
+      console.error('CORS blocked origin:', `[${currentOrigin}]`);
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -33,13 +43,33 @@ app.use(cors({
 app.use(express.json({ limit: '10kb' }));
 app.use(mongoSanitize());
 
-// Rate Limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again after 15 minutes'
+// CSRF Protection Middleware for state-changing requests
+app.use((req, res, next) => {
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+    // Custom header check as a stateless CSRF protection
+    if (!req.headers['x-requested-with'] && !req.headers['authorization']) {
+      return res.status(403).json({ message: 'Potential CSRF attack blocked. Missing required headers.' });
+    }
+  }
+  next();
 });
-app.use('/api', limiter);
+
+// Per-User Rate Limiting (Authenticated users)
+const aiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 10, // 10 AI requests per minute per user
+  keyGenerator: (req) => req.user?.uid || req.ip, // Use Firebase UID or fallback to IP
+  message: 'AI quota exceeded. Please wait a minute.'
+});
+app.use('/api/ai', aiLimiter);
+
+// General Rate Limiting (IP-based)
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: 'Too many requests. Please try again later.'
+});
+app.use('/api', generalLimiter);
 
 // Health Check
 app.get('/health', (req, res) => {

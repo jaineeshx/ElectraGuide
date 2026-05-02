@@ -6,8 +6,8 @@ services:
       - "8000:8000"
     env_file:
       - ./backend/.env
-    volumes:
-      - ./backend/service-account.json:/app/service-account.json
+    # volumes:
+    #   - ./backend/service-account.json:/app/service-account.json
 
   frontend:
     build: ./frontend
