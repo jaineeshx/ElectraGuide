@@ -41,16 +41,25 @@ const getChatResponse = async (history, message) => {
 
 const simulateScenario = async (scenario) => {
   try {
-    // Sanitize and limit the scenario input to prevent injection
-    const cleanScenario = scenario.substring(0, 500).replace(/[<>{}\[\]]/g, '');
+    // 1. Strict Whitelist-based input validation
+    const cleanScenario = scenario
+      .substring(0, 500)
+      .replace(/[^a-zA-Z0-9\s.,?!'()-]/g, ''); // Allow only alphanumeric and basic punctuation
     
     const model = genAI.getGenerativeModel({ 
       model: "gemini-1.5-flash-001",
-      systemInstruction: "You are an Indian election expert simulation engine. Only provide step-by-step official guidance for the specific scenario provided. Do not deviate into other topics."
+      systemInstruction: "You are the Indian Election Scenario Simulator. You provide official, neutral, and step-by-step guidance. Never deviate from the provided scenario."
     });
     
-    const prompt = `Simulate this election day scenario for a voter: ${cleanScenario}. 
-    Provide step-by-step guidance on what they should do in this situation, keeping it simple and official.`;
+    // 2. Structured Prompt with clear delimiters
+    const prompt = `### INSTRUCTION ###
+Simulate the following election day scenario and provide official guidance.
+### SCENARIO DATA ###
+${cleanScenario}
+### RESPONSE FORMAT ###
+1. Situation Analysis
+2. Official Step-by-Step Action
+3. Helpful Tips`;
     
     const result = await model.generateContent(prompt);
     const response = await result.response;

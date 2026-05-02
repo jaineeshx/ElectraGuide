@@ -33,19 +33,28 @@ router.post('/quiz/submit', auth, async (req, res) => {
       }
     });
 
-    const user = await User.findOne({ firebaseId: req.user.uid });
-    if (user) {
-      // Prevent multiple submissions if needed (Hackathon rule)
-      if (user.quizResults.length > 0) {
-        return res.status(400).json({ message: 'Quiz already submitted.' });
+    // Use an atomic update to prevent race conditions (multiple submissions)
+    const result = await User.updateOne(
+      { 
+        firebaseId: req.user.uid,
+        'quizResults.0': { $exists: false } // Only if quizResults array is empty
+      },
+      {
+        $push: {
+          quizResults: {
+            score,
+            total: Object.keys(QUIZ_ANSWERS).length,
+            completedAt: new Date()
+          }
+        }
       }
+    );
 
-      user.quizResults.push({
-        score,
-        total: Object.keys(QUIZ_ANSWERS).length,
-        completedAt: new Date()
-      });
-      await user.save();
+    if (result.matchedCount === 0) {
+      // Check if it failed because the user doesn't exist or already has a result
+      const userExists = await User.exists({ firebaseId: req.user.uid });
+      if (!userExists) return res.status(404).json({ message: 'User not found' });
+      return res.status(400).json({ message: 'Quiz already submitted.' });
     }
 
     res.json({ score, total: Object.keys(QUIZ_ANSWERS).length });

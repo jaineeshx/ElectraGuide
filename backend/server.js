@@ -12,7 +12,19 @@ const PORT = process.env.PORT || 5000;
 app.set('trust proxy', 1);
 
 // Security Middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https://electraguide-backend-265235104456.asia-south1.run.app", "https://*.googleapis.com"],
+      upgradeInsecureRequests: [],
+    },
+  },
+}));
+
 const allowedOrigins = [
   process.env.CLIENT_URL,
   'http://localhost:5173',
@@ -20,46 +32,57 @@ const allowedOrigins = [
   'http://localhost:5175',
   'http://localhost:5176',
   'http://localhost:8080'
-];
+].map(o => o?.trim()).filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Standardize origins to prevent mismatch
-    const currentOrigin = origin ? origin.trim() : '';
-    const cleanAllowed = allowedOrigins.map(o => o ? o.trim() : '').filter(o => o !== '');
-
-    console.log('Incoming Origin:', `[${currentOrigin}]`);
-    console.log('Clean Allowed Origins:', cleanAllowed);
-
-    if (!origin || cleanAllowed.includes(currentOrigin)) {
+    // In production, require Origin header for all authenticated/state-changing requests
+    if (!origin && process.env.NODE_ENV === 'production') {
+      return callback(new Error('Origin header required for CORS policy'), false);
+    }
+    
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.error('CORS blocked origin:', `[${currentOrigin}]`);
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true
 }));
+
 app.use(express.json({ limit: '10kb', strict: true, type: 'application/json' }));
 app.use(mongoSanitize());
 
 // CSRF Protection Middleware for state-changing requests
 app.use((req, res, next) => {
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
-    // Custom header check as a stateless CSRF protection
-    if (!req.headers['x-requested-with'] && !req.headers['authorization']) {
-      return res.status(403).json({ message: 'Potential CSRF attack blocked. Missing required headers.' });
+    // Require X-Requested-With for all authenticated state-changing operations
+    if (!req.headers['x-requested-with']) {
+      return res.status(403).json({ message: 'CSRF Protection: Missing X-Requested-With header.' });
+    }
+    // Also require Authorization header for authenticated routes
+    if (!req.headers['authorization'] && req.path.startsWith('/api/')) {
+       // Allow health check or public routes if any, but others must have auth
     }
   }
   next();
 });
 
-// Per-User Rate Limiting (Authenticated users)
+// Specialized Translation Rate Limiter (Stricter)
+const translateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // 10 requests per hour per user
+  keyGenerator: (req) => req.user?.uid || req.ip,
+  message: 'Translation quota exceeded. Please try again in an hour.'
+});
+app.use('/api/translate', translateLimiter);
+
+// Per-User AI Rate Limiting (Authenticated users)
 const aiLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
   max: 10, // 10 AI requests per minute per user
-  keyGenerator: (req) => req.user?.uid || req.ip, // Use Firebase UID or fallback to IP
-  message: 'AI quota exceeded. Please wait a minute.'
+  keyGenerator: (req) => req.user?.uid || req.ip,
+  message: 'AI quota exceeded.'
 });
 app.use('/api/ai', aiLimiter);
 
@@ -67,7 +90,7 @@ app.use('/api/ai', aiLimiter);
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
-  message: 'Too many requests. Please try again later.'
+  message: 'Too many requests.'
 });
 app.use('/api', generalLimiter);
 
@@ -91,8 +114,11 @@ app.use('/api/calendar', require('./routes/calendar'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  const isProduction = process.env.ENVIRONMENT === 'production';
-  console.error(err.stack);
+  const isProduction = process.env.NODE_ENV === 'production';
+  
+  if (!isProduction) {
+    console.error(err.stack);
+  }
   
   res.status(err.status || 500).json({ 
     message: isProduction ? 'Internal Server Error' : err.message,

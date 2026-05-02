@@ -16,7 +16,7 @@ if (Test-Path $ENV_FILE) {
         $yaml += "$($name.Trim()): $($value.Trim())"
     }
     # Add production specific vars
-    $yaml += "ENVIRONMENT: production"
+    $yaml += "NODE_ENV: production"
     $yaml += "CLIENT_URL: https://electraguide-frontend-265235104456.asia-south1.run.app"
     
     $yaml | Out-File -FilePath $YAML_FILE -Encoding utf8
